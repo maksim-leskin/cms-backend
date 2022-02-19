@@ -1,14 +1,17 @@
 /* eslint-disable no-console */
 // импорт стандартных библиотек Node.js
-const { existsSync, readFileSync, writeFileSync } = require('fs');
-const { createServer } = require('http');
+const {existsSync, readFileSync, writeFileSync} = require('fs');
+const {createServer} = require('http');
 
 // файл для базы данных
-const DB_FILE = process.env.DB_FILE || './db.json';
+const DB_GOODS = process.env.DB_GOODS || './db_goods.json';
+// файл для базы данных
+const DB_CATEGORY = process.env.DB_CATEGORY || './db_category.json';
 // номер порта, на котором будет запущен сервер
 const PORT = process.env.PORT || 3000;
 // префикс URI для всех методов приложения
-const URI_PREFIX = '/api/goods';
+const URI_GOODS = '/api/goods';
+const URI_CATEGORY = '/api/category';
 
 /**
  * Класс ошибки, используется для отправки ответа с определённым кодом и описанием ошибки
@@ -71,16 +74,36 @@ function makeGoodsFromData(data) {
   };
 
   // проверяем, все ли данные корректные и заполняем объект ошибок, которые нужно отдать клиенту
-  if (!goods.title) errors.push({ field: 'title', message: 'Не указано название товара' });
-  if (!goods.description) errors.push({ field: 'description', message: 'Не указано описание' });
-  if (!isNumber(goods.price)) errors.push({ field: 'price', message: 'Не указана цена' });
-  if (!isNumber(goods.count)) errors.push({ field: 'count', message: 'Не указано кол-во' });
-  if (!goods.units) errors.push({ field: 'units', message: 'Не указаны ед. измерения' });
+  if (!goods.title) errors.push({field: 'title', message: 'Не указано название товара'});
+  if (!goods.description) errors.push({field: 'description', message: 'Не указано описание'});
+  if (!isNumber(goods.price)) errors.push({field: 'price', message: 'Не указана цена'});
+  if (!isNumber(goods.count)) errors.push({field: 'count', message: 'Не указано кол-во'});
+  if (!goods.units) errors.push({field: 'units', message: 'Не указаны ед. измерения'});
 
   // если есть ошибки, то бросаем объект ошибки с их списком и 422 статусом
-  if (errors.length) throw new ApiError(422, { errors });
+  if (errors.length) throw new ApiError(422, {errors});
 
   return goods;
+}
+
+/**
+ * Возвращает список товаров из базы данных
+ * @returns {{ title: string, rus: string}[]} Массив Категорий
+ */
+function getCategoryList() {
+  const category = JSON.parse(readFileSync(DB_CATEGORY) || '[]');
+
+  return category;
+}
+
+
+/**
+ * Возвращает список товаров из базы данных
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ */
+function getDiscountList() {
+  const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
+  return goods.filter(item => item.discount);
 }
 
 /**
@@ -89,12 +112,12 @@ function makeGoodsFromData(data) {
  * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
  */
 function getGoodsList(params = {}) {
-  const goods = JSON.parse(readFileSync(DB_FILE) || '[]');
+  const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
   if (params.search) {
     const search = params.search.trim().toLowerCase();
     return goods.filter(goods => [
-      goods.title,
-      goods.description,
+        goods.title,
+        goods.description,
       ]
         .some(str => str.toLowerCase().includes(search))
     );
@@ -111,7 +134,7 @@ function getGoodsList(params = {}) {
 function createGoods(data) {
   const newItem = makeGoodsFromData(data);
   newItem.id = Math.random().toString().substring(2, 8) + Date.now().toString().substring(9);
-  writeFileSync(DB_FILE, JSON.stringify([...getGoodsList(), newItem]), { encoding: 'utf8' });
+  writeFileSync(DB_GOODS, JSON.stringify([...getGoodsList(), newItem]), {encoding: 'utf8'});
   return newItem;
 }
 
@@ -122,8 +145,8 @@ function createGoods(data) {
  * @returns {{id: string, title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }} Объект клиента
  */
 function getGoods(itemId) {
-  const goods = getGoodsList().find(({ id }) => id === itemId);
-  if (!goods) throw new ApiError(404, { message: 'Goods Not Found' });
+  const goods = getGoodsList().find(({id}) => id === itemId);
+  if (!goods) throw new ApiError(404, {message: 'Goods Not Found'});
   return goods;
 }
 
@@ -137,10 +160,10 @@ function getGoods(itemId) {
  */
 function updateGoods(itemId, data) {
   const goods = getGoodsList();
-  const itemIndex = goods.findIndex(({ id }) => id === itemId);
-  if (itemIndex === -1) throw new ApiError(404, { message: 'Goods Not Found' });
-  Object.assign(goods[itemIndex], makeGoodsFromData({ ...goods[itemIndex], ...data }));
-  writeFileSync(DB_FILE, JSON.stringify(goods), { encoding: 'utf8' });
+  const itemIndex = goods.findIndex(({id}) => id === itemId);
+  if (itemIndex === -1) throw new ApiError(404, {message: 'Goods Not Found'});
+  Object.assign(goods[itemIndex], makeGoodsFromData({...goods[itemIndex], ...data}));
+  writeFileSync(DB_GOODS, JSON.stringify(goods), {encoding: 'utf8'});
   return goods[itemIndex];
 }
 
@@ -151,15 +174,17 @@ function updateGoods(itemId, data) {
  */
 function deleteGoods(itemId) {
   const goods = getGoodsList();
-  const itemIndex = goods.findIndex(({ id }) => id === itemId);
-  if (itemIndex === -1) throw new ApiError(404, { message: 'Goods Not Found' });
+  const itemIndex = goods.findIndex(({id}) => id === itemId);
+  if (itemIndex === -1) throw new ApiError(404, {message: 'Goods Not Found'});
   goods.splice(itemIndex, 1);
-  writeFileSync(DB_FILE, JSON.stringify(goods), { encoding: 'utf8' });
+  writeFileSync(DB_GOODS, JSON.stringify(goods), {encoding: 'utf8'});
   return {};
 }
 
+
 // создаём новый файл с базой данных, если он не существует
-if (!existsSync(DB_FILE)) writeFileSync(DB_FILE, '[]', { encoding: 'utf8' });
+if (!existsSync(DB_GOODS)) writeFileSync(DB_GOODS, '[]', {encoding: 'utf8'});
+if (!existsSync(DB_CATEGORY)) writeFileSync(DB_CATEGORY, '[]', {encoding: 'utf8'});
 
 // создаём HTTP сервер, переданная функция будет реагировать на все запросы к нему
 module.exports = createServer(async (req, res) => {
@@ -182,16 +207,22 @@ module.exports = createServer(async (req, res) => {
   }
 
   // если URI не начинается с нужного префикса - можем сразу отдать 404
-  if (!req.url || !req.url.startsWith(URI_PREFIX)) {
+  if (!req.url || (!req.url.startsWith(URI_GOODS) && !req.url.startsWith(URI_CATEGORY))) {
     res.statusCode = 404;
-    res.end(JSON.stringify({ message: 'Not Found' }));
+    res.end(JSON.stringify({message: 'Not Found'}));
     return;
   }
 
+  let data = null;
   // убираем из запроса префикс URI, разбиваем его на путь и параметры
-  const [uri, query] = req.url.substring(URI_PREFIX.length).split('?');
+  if (req.url.startsWith(URI_CATEGORY)) {
+    data = [URI_CATEGORY];
+  }
+  if (req.url.startsWith(URI_GOODS)) {
+    data = req.url.substring(URI_GOODS.length).split('?');
+  }
+  const [uri, query] = data;
   const queryParams = {};
-
   // параметры могут отсутствовать вообще или иметь вид a=b&b=c
   // во втором случае наполняем объект queryParams { a: 'b', b: 'c' }
   if (query) {
@@ -203,7 +234,14 @@ module.exports = createServer(async (req, res) => {
 
   try {
     // обрабатываем запрос и формируем тело ответа
+    console.log(uri)
     const body = await (async () => {
+      if (uri === URI_CATEGORY) {
+        if (req.method === 'GET') return getCategoryList();
+      }
+      if (uri === '/discount') {
+        return getDiscountList();
+      }
       if (uri === '' || uri === '/') {
         // /api/goods
         if (req.method === 'GET') return getGoodsList(queryParams);
@@ -211,7 +249,7 @@ module.exports = createServer(async (req, res) => {
           const createdItem = createGoods(await drainJson(req));
           res.statusCode = 201;
           res.setHeader('Access-Control-Expose-Headers', 'Location');
-          res.setHeader('Location', `${URI_PREFIX}/${createdItem.id}`);
+          res.setHeader('Location', `${URI_GOODS}/${createdItem.id}`);
           return createdItem;
         }
       } else {
@@ -233,7 +271,7 @@ module.exports = createServer(async (req, res) => {
     } else {
       // если что-то пошло не так - пишем об этом в консоль и возвращаем 500 ошибку сервера
       res.statusCode = 500;
-      res.end(JSON.stringify({ message: 'Server Error' }));
+      res.end(JSON.stringify({message: 'Server Error'}));
       console.error(err);
     }
   }
@@ -244,11 +282,15 @@ module.exports = createServer(async (req, res) => {
       console.log(`Сервер CRM запущен. Вы можете использовать его по адресу http://localhost:${PORT}`);
       console.log('Нажмите CTRL+C, чтобы остановить сервер');
       console.log('Доступные методы:');
-      console.log(`GET ${URI_PREFIX} - получить список товаров, в query параметр search можно передать поисковый запрос`);
-      console.log(`POST ${URI_PREFIX} - создать товар, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
-      console.log(`GET ${URI_PREFIX}/{id} - получить товар по его ID`);
-      console.log(`PATCH ${URI_PREFIX}/{id} - изменить товар с ID, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
-      console.log(`DELETE ${URI_PREFIX}/{id} - удалить товар по ID`);
+      console.log(`GET ${URI_GOODS} - получить список товаров, в query параметр search можно передать поисковый запрос`);
+      console.log(`POST ${URI_GOODS} - создать товар, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
+      console.log(`GET ${URI_GOODS}/{id} - получить товар по его ID`);
+      console.log(`PATCH ${URI_GOODS}/{id} - изменить товар с ID, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
+      console.log(`DELETE ${URI_GOODS}/{id} - удалить товар по ID`);
+      console.log(`GET ${URI_GOODS}/discount - получить список дисконтных товаров`);
+      console.log(`GET ${URI_GOODS}/{category} - получить список товаров по категории`);
+      console.log(`GET ${URI_CATEGORY} - получить список категорий`);
+
     }
   })
   // ...и вызываем запуск сервера на указанном порту
