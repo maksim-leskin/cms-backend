@@ -87,7 +87,7 @@ function makeGoodsFromData(data) {
 }
 
 /**
- * Возвращает список товаров из базы данных
+ * Возвращает список категорий из базы данных
  * @returns {{ title: string, rus: string}[]} Массив Категорий
  */
 function getCategoryList() {
@@ -96,23 +96,13 @@ function getCategoryList() {
 
 
 /**
- * Возвращает список товаров из базы данных
+ * Возвращает список дисконтных товаров из базы данных
  * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
  */
 function getDiscountList() {
   const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
   return goods.filter(item => item.discount);
 }
-
-/**
- * Возвращает список товаров из базы данных
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
- */
-function getGoodsCategorytList(category) {
-  const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
-  return goods.filter(item => item.category === category);
-}
-
 
 
 /**
@@ -133,6 +123,20 @@ function getGoodsList(params = {}) {
   }
   return goods;
 }
+
+
+/**
+ * Возвращает список товаров по категориям из базы данных
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ */
+function getGoodsCategorytList(category) {
+  if (!category) return getGoodsList();
+  const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
+  if (!goods) throw new ApiError(404, {message: 'Goods Not Found'});
+  return goods.filter(item => item.category === category);
+}
+
+
 
 /**
  * Создаёт и сохраняет товар в базу данных
