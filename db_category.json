@@ -1,10 +1,10 @@
 [
   {
-    "title": "Mobile Phone",
+    "title": "mobile-phone",
     "rus": "Мобильный телефон"
   },
   {
-    "title": "Toys",
+    "title": "toys",
     "rus": "Игрушки"
   },
   {
@@ -12,31 +12,35 @@
     "rus": "ТВ приставка"
   },
   {
-    "title": "Cables",
+    "title": "cables",
     "rus": "Кабеля"
   },
   {
-    "title": "Cleaning",
+    "title": "cleaning",
     "rus": "Уход за домом"
   },
   {
-    "title": "Smart House",
+    "title": "smart-house",
     "rus": "Умный дом"
   },
   {
-    "title": "Portable Vehicles",
+    "title": "portable-vehicles",
     "rus": "Портативный транспорт"
   },
   {
-    "title": "VR systems",
+    "title": "vr-systems",
     "rus": "VR системы"
   },
   {
-    "title": "Baby Transport",
+    "title": "baby-transport",
     "rus": "Детский транспорт"
   },
   {
-    "title": "Kitchen Appliances",
+    "title": "kitchen-appliances",
     "rus": "Кухонная техника"
+  },
+  {
+    "title": "health-beauty",
+    "rus": "Красота и здоровье"
   }
 ]

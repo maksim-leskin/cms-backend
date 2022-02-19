@@ -91,9 +91,7 @@ function makeGoodsFromData(data) {
  * @returns {{ title: string, rus: string}[]} Массив Категорий
  */
 function getCategoryList() {
-  const category = JSON.parse(readFileSync(DB_CATEGORY) || '[]');
-
-  return category;
+  return JSON.parse(readFileSync(DB_CATEGORY) || '[]');
 }
 
 
@@ -105,6 +103,17 @@ function getDiscountList() {
   const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
   return goods.filter(item => item.discount);
 }
+
+/**
+ * Возвращает список товаров из базы данных
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ */
+function getGoodsCategorytList(category) {
+  const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
+  return goods.filter(item => item.category === category);
+}
+
+
 
 /**
  * Возвращает список товаров из базы данных
@@ -234,13 +243,15 @@ module.exports = createServer(async (req, res) => {
 
   try {
     // обрабатываем запрос и формируем тело ответа
-    console.log(uri)
     const body = await (async () => {
       if (uri === URI_CATEGORY) {
         if (req.method === 'GET') return getCategoryList();
       }
       if (uri === '/discount') {
         return getDiscountList();
+      }
+      if (/^\/category\/*/.test(uri)) {
+        return getGoodsCategorytList(uri.replace(/^\/category\//, ''));
       }
       if (uri === '' || uri === '/') {
         // /api/goods
@@ -288,7 +299,7 @@ module.exports = createServer(async (req, res) => {
       console.log(`PATCH ${URI_GOODS}/{id} - изменить товар с ID, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
       console.log(`DELETE ${URI_GOODS}/{id} - удалить товар по ID`);
       console.log(`GET ${URI_GOODS}/discount - получить список дисконтных товаров`);
-      console.log(`GET ${URI_GOODS}/{category} - получить список товаров по категории`);
+      console.log(`GET ${URI_GOODS}/category/{category} - получить список товаров по категории`);
       console.log(`GET ${URI_CATEGORY} - получить список категорий`);
 
     }
