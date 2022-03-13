@@ -1,6 +1,6 @@
 {
   "name": "crm-backend",
-  "version": "2.2.2",
+  "version": "3.0.1",
   "description": "Перед запуском убедитесь, что вы установили Node.js версии 16 или выше.",
   "main": "index.js",
   "scripts": {
