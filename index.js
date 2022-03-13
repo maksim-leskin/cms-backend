@@ -1,6 +1,6 @@
 /* eslint-disable no-console */
 // импорт стандартных библиотек Node.js
-const {existsSync, readFileSync, writeFileSync} = require('fs');
+const {existsSync, mkdirSync, readFileSync, writeFileSync, writeFile} = require('fs');
 const {createServer} = require('http');
 
 // файл для базы данных
@@ -42,13 +42,31 @@ function drainJson(req) {
   });
 }
 
+
+function isImage(data){
+  return (/^data:image/).test(data);
+}
+
+function dataURLtoFile(base64, id) {
+  if (!existsSync('./image')){
+    mkdirSync('./image');
+  }
+  const format = base64.split(';')[0].split('/')[1];
+  const ext = format === 'svg+xml' ? 'svg' : format === 'jpeg' ? 'jpg' : format;
+  const base64Image = base64.split(';base64,').pop();
+  writeFile(`./image/${id}.${ext}`, base64Image, {encoding: 'base64'}, (err) => {
+    if (err) console.log(err);
+  });
+  return `image/${id}.${ext}`
+}
+
 /**
  * Проверяет входные данные и создаёт из них корректный объект товара
  * @param {Object} data - Объект с входными данными
  * @throws {ApiError} Некорректные данные в аргументе (statusCode 422)
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }} Объект товара
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }} Объект товара
  */
-function makeGoodsFromData(data) {
+function makeGoodsFromData(data, id) {
   const errors = [];
 
   function asString(str) {
@@ -67,10 +85,7 @@ function makeGoodsFromData(data) {
     discount: data.discount || 0,
     count: data.count,
     units: asString(data.units),
-    images: [{
-      "small": data?.images?.small,
-      "big": data?.images?.big
-    }]
+    image: asString(data.image)
   };
 
   // проверяем, все ли данные корректные и заполняем объект ошибок, которые нужно отдать клиенту
@@ -82,6 +97,14 @@ function makeGoodsFromData(data) {
 
   // если есть ошибки, то бросаем объект ошибки с их списком и 422 статусом
   if (errors.length) throw new ApiError(422, {errors});
+
+
+  if (isImage(goods.image)) {
+    const url = dataURLtoFile(goods.image, id);
+    goods.image = url;
+  } else {
+    goods.image = '';
+  }
 
   return goods;
 }
@@ -97,7 +120,7 @@ function getCategoryList() {
 
 /**
  * Возвращает список дисконтных товаров из базы данных
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }[]} Массив товаров
  */
 function getDiscountList() {
   const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
@@ -108,7 +131,7 @@ function getDiscountList() {
 /**
  * Возвращает список товаров из базы данных
  * @param {{ search: string }} [params] - Поисковая строка
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }[]} Массив товаров
  */
 function getGoodsList(params = {}) {
   const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
@@ -127,7 +150,7 @@ function getGoodsList(params = {}) {
 
 /**
  * Возвращает список товаров по категориям из базы данных
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }[]} Массив товаров
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }[]} Массив товаров
  */
 function getGoodsCategorytList(category) {
   if (!category) return getGoodsList();
@@ -142,11 +165,12 @@ function getGoodsCategorytList(category) {
  * Создаёт и сохраняет товар в базу данных
  * @throws {ApiError} Некорректные данные в аргументе, товар не создан (statusCode 422)
  * @param {Object} data - Данные из тела запроса
- * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }} Объект клиента
+ * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }} Объект клиента
  */
 function createGoods(data) {
-  const newItem = makeGoodsFromData(data);
-  newItem.id = Math.random().toString().substring(2, 8) + Date.now().toString().substring(9);
+  const id = Math.random().toString().substring(2, 8) + Date.now().toString().substring(9)
+  const newItem = makeGoodsFromData(data, id);
+  newItem.id = id;
   writeFileSync(DB_GOODS, JSON.stringify([...getGoodsList(), newItem]), {encoding: 'utf8'});
   return newItem;
 }
@@ -155,7 +179,7 @@ function createGoods(data) {
  * Возвращает объект товара по его ID
  * @param {string} itemId - ID товара
  * @throws {ApiError} Товар с таким ID не найден (statusCode 404)
- * @returns {{id: string, title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }} Объект клиента
+ * @returns {{id: string, title: string, description: string, price: number, discount: number, count: number, units: string, images: string }} Объект клиента
  */
 function getGoods(itemId) {
   const goods = getGoodsList().find(({id}) => id === itemId);
@@ -166,16 +190,16 @@ function getGoods(itemId) {
 /**
  * Изменяет товар с указанным ID и сохраняет изменения в базу данных
  * @param {string} itemId - ID изменяемого товара
- * @param {{title?: string, description?: string, price?: number, discount?: number, count?: number, units?: string, images?: [] }} data - Объект с изменяемыми данными
+ * @param {{title?: string, description?: string, price?: number, discount?: number, count?: number, units?: string, images?: string }} data - Объект с изменяемыми данными
  * @throws {ApiError} Товар с таким ID не найден (statusCode 404)
  * @throws {ApiError} Некорректные данные в аргументе (statusCode 422)
- * @returns {{id: string, title: string, description: string, price: number, discount: number, count: number, units: string, images: [] }} Объект товара
+ * @returns {{id: string, title: string, description: string, price: number, discount: number, count: number, units: string, images: string }} Объект товара
  */
 function updateGoods(itemId, data) {
   const goods = getGoodsList();
   const itemIndex = goods.findIndex(({id}) => id === itemId);
   if (itemIndex === -1) throw new ApiError(404, {message: 'Goods Not Found'});
-  Object.assign(goods[itemIndex], makeGoodsFromData({...goods[itemIndex], ...data}));
+  Object.assign(goods[itemIndex], makeGoodsFromData({...goods[itemIndex], ...data}, itemId));
   writeFileSync(DB_GOODS, JSON.stringify(goods), {encoding: 'utf8'});
   return goods[itemIndex];
 }
@@ -298,9 +322,9 @@ module.exports = createServer(async (req, res) => {
       console.log('Нажмите CTRL+C, чтобы остановить сервер');
       console.log('Доступные методы:');
       console.log(`GET ${URI_GOODS} - получить список товаров, в query параметр search можно передать поисковый запрос`);
-      console.log(`POST ${URI_GOODS} - создать товар, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
+      console.log(`POST ${URI_GOODS} - создать товар, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: string }`);
       console.log(`GET ${URI_GOODS}/{id} - получить товар по его ID`);
-      console.log(`PATCH ${URI_GOODS}/{id} - изменить товар с ID, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: [] }`);
+      console.log(`PATCH ${URI_GOODS}/{id} - изменить товар с ID, в теле запроса нужно передать объект {title: string, description: string, price: number, discount?: number, count: number, units: string, images?: string }`);
       console.log(`DELETE ${URI_GOODS}/{id} - удалить товар по ID`);
       console.log(`GET ${URI_GOODS}/discount - получить список дисконтных товаров`);
       console.log(`GET ${URI_GOODS}/category/{category} - получить список товаров по категории`);
