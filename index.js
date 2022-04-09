@@ -227,6 +227,15 @@ if (!existsSync(DB_CATEGORY)) writeFileSync(DB_CATEGORY, '[]', {encoding: 'utf8'
 module.exports = createServer(async (req, res) => {
   // req - объект с информацией о запросе, res - объект для управления отправляемым ответом
 
+  if  (req.url.substring(1, 6) === 'image') {
+    res.statusCode = 200;
+    res.setHeader("Content-Type", "image/jpeg");
+    require("fs").readFile(`.${req.url}`, (err, image) => {
+      res.end(image);
+    });
+    return;
+  }
+
   // этот заголовок ответа указывает, что тело ответа будет в JSON формате
   res.setHeader('Content-Type', 'application/json');
 
