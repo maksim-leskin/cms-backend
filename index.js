@@ -85,7 +85,7 @@ function makeGoodsFromData(data, id) {
     discount: data.discount || 0,
     count: data.count,
     units: asString(data.units),
-    image: asString(data.image)
+    image: data.image,
   };
 
   // проверяем, все ли данные корректные и заполняем объект ошибок, которые нужно отдать клиенту
