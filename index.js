@@ -80,15 +80,14 @@ function makeGoodsFromData(data, id) {
   function asCategory(str) {
     const list = getCategoryList()
     const cat = list.find(item => item.toLowerCase() === str.trim().toLowerCase());
-    if (cat) {
-      return cat
-    } else {
+    if (cat) return cat
+
       let newCat = str.trim().toLowerCase();
       newCat = newCat[0].toUpperCase() + newCat.substring(1);
       list.push(newCat);
       writeFileSync(DB_CATEGORY, JSON.stringify(list), {encoding: 'utf8'});
       return newCat;
-    }
+
   }
 
   // составляем объект, где есть только необходимые поля
@@ -155,8 +154,7 @@ function getGoodsList(params = {}) {
     return goods.filter(goods => [
         goods.title,
         goods.description,
-      ]
-        .some(str => str.toLowerCase().includes(search))
+      ].some(str => str.toLowerCase().includes(search))
     );
   }
   return goods;
