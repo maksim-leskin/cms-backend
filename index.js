@@ -77,6 +77,20 @@ function makeGoodsFromData(data, id) {
     return !Number.isNaN(parseFloat(num)) && isFinite(num)
   }
 
+  function asCategory(str) {
+    const list = getCategoryList()
+    const cat = list.find(item => item.toLowerCase() === str.trim().toLowerCase());
+    if (cat) {
+      return cat
+    } else {
+      let newCat = str.trim().toLowerCase();
+      newCat = newCat[0].toUpperCase() + newCat.substring(1);
+      list.push(newCat);
+      writeFileSync(DB_CATEGORY, JSON.stringify(list), {encoding: 'utf8'});
+      return newCat;
+    }
+  }
+
   // составляем объект, где есть только необходимые поля
   const goods = {
     title: asString(data.title),
@@ -85,7 +99,8 @@ function makeGoodsFromData(data, id) {
     discount: data.discount || 0,
     count: data.count,
     units: asString(data.units),
-    image: asString(data.image)
+    image: data.image,
+    category: asCategory(data.category),
   };
 
   // проверяем, все ли данные корректные и заполняем объект ошибок, которые нужно отдать клиенту
@@ -94,7 +109,7 @@ function makeGoodsFromData(data, id) {
   if (!isNumber(goods.price)) errors.push({field: 'price', message: 'Не указана цена'});
   if (!isNumber(goods.count)) errors.push({field: 'count', message: 'Не указано кол-во'});
   if (!goods.units) errors.push({field: 'units', message: 'Не указаны ед. измерения'});
-
+  if (!goods.category) errors.push({field: 'category', message: 'Не указана категория товара'});
   // если есть ошибки, то бросаем объект ошибки с их списком и 422 статусом
   if (errors.length) throw new ApiError(422, {errors});
 
