@@ -43,8 +43,12 @@ function drainJson(req) {
 }
 
 
-function isImage(data){
+function isImageBase64(data) {
   return (/^data:image/).test(data);
+}
+
+function isImageURL(data) {
+  return (/^image\//).test(data)
 }
 
 function dataURLtoFile(base64, id) {
@@ -113,11 +117,11 @@ function makeGoodsFromData(data, id) {
   if (errors.length) throw new ApiError(422, {errors});
 
 
-  if (isImage(goods.image)) {
-    const url = dataURLtoFile(goods.image, id);
-    goods.image = url;
-  } else {
-    goods.image = '';
+  if (isImageBase64(book.image)) {
+    const url = dataURLtoFile(book.image, id);
+    book.image = url;
+  } else if (!isImageURL(book.image)) {
+    book.image = 'image/notimage.jpg';
   }
 
   return goods;
