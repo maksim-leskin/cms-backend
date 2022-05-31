@@ -117,11 +117,11 @@ function makeGoodsFromData(data, id) {
   if (errors.length) throw new ApiError(422, {errors});
 
 
-  if (isImageBase64(book.image)) {
-    const url = dataURLtoFile(book.image, id);
-    book.image = url;
-  } else if (!isImageURL(book.image)) {
-    book.image = 'image/notimage.jpg';
+  if (isImageBase64(goods.image)) {
+    const url = dataURLtoFile(goods.image, id);
+    goods.image = url;
+  } else if (!isImageURL(goods.image)) {
+    goods.image = 'image/notimage.jpg';
   }
 
   return goods;
