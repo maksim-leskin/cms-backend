@@ -170,10 +170,11 @@ function getGoodsList(params = {}) {
  * @returns {{ title: string, description: string, price: number, discount: number, count: number, units: string, images: string }[]} Массив товаров
  */
 function getGoodsCategorytList(category) {
+  console.log('category: ', category);
   if (!category) return getGoodsList();
   const goods = JSON.parse(readFileSync(DB_GOODS) || '[]');
   if (!goods) throw new ApiError(404, {message: 'Goods Not Found'});
-  return goods.filter(item => item.category === category);
+  return goods.filter(item => decodeURI(item.category) === decodeURI(category));
 }
 
 
