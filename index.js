@@ -5,8 +5,6 @@ const {createServer} = require('http');
 
 // файл для базы данных
 const DB_GOODS = process.env.DB_GOODS || './db_goods.json';
-// файл для базы данных
-const DB_CATEGORY = process.env.DB_CATEGORY || './db_category.json';
 // номер порта, на котором будет запущен сервер
 const PORT = process.env.PORT || 3000;
 // префикс URI для всех методов приложения
@@ -81,18 +79,6 @@ function makeGoodsFromData(data, id) {
     return !Number.isNaN(parseFloat(num)) && isFinite(num)
   }
 
-  function asCategory(str) {
-    const list = getCategoryList()
-    const cat = list.find(item => item.toLowerCase() === str.trim().toLowerCase());
-    if (cat) return cat
-
-      let newCat = str.trim().toLowerCase();
-      newCat = newCat[0].toUpperCase() + newCat.substring(1);
-      list.push(newCat);
-      writeFileSync(DB_CATEGORY, JSON.stringify(list), {encoding: 'utf8'});
-      return newCat;
-
-  }
 
   // составляем объект, где есть только необходимые поля
   const goods = {
@@ -103,7 +89,7 @@ function makeGoodsFromData(data, id) {
     count: data.count,
     units: asString(data.units),
     image: data.image,
-    category: asCategory(data.category),
+    category: data.category,
   };
 
   // проверяем, все ли данные корректные и заполняем объект ошибок, которые нужно отдать клиенту
@@ -132,7 +118,10 @@ function makeGoodsFromData(data, id) {
  * @returns {{ title: string, rus: string}[]} Массив Категорий
  */
 function getCategoryList() {
-  return JSON.parse(readFileSync(DB_CATEGORY) || '[]');
+    const goods = JSON.parse(readFileSync(DB_GOODS) || "[]");
+    const category = [...new Set(goods.map(item => item.category))];
+    return category;
+
 }
 
 
@@ -239,7 +228,6 @@ function deleteGoods(itemId) {
 
 // создаём новый файл с базой данных, если он не существует
 if (!existsSync(DB_GOODS)) writeFileSync(DB_GOODS, '[]', {encoding: 'utf8'});
-if (!existsSync(DB_CATEGORY)) writeFileSync(DB_CATEGORY, '[]', {encoding: 'utf8'});
 
 // создаём HTTP сервер, переданная функция будет реагировать на все запросы к нему
 module.exports = createServer(async (req, res) => {
@@ -345,7 +333,7 @@ module.exports = createServer(async (req, res) => {
   // выводим инструкцию, как только сервер запустился...
   .on('listening', () => {
     if (process.env.NODE_ENV !== 'test') {
-      console.log(`Сервер CRM запущен. Вы можете использовать его по адресу http://localhost:${PORT}`);
+      console.log(`Сервер CMS запущен. Вы можете использовать его по адресу http://localhost:${PORT}`);
       console.log('Нажмите CTRL+C, чтобы остановить сервер');
       console.log('Доступные методы:');
       console.log(`GET ${URI_GOODS} - получить список товаров, в query параметр search можно передать поисковый запрос`);
