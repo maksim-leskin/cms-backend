@@ -34,7 +34,8 @@ function drainJson(req) {
   });
 }
 
-const pagination = (data, page, count = 10) => {
+const pagination = (data, page, cnt = 10) => {
+  const count = parseInt(cnt) || 10;
   const end = count * page;
   const start = page === 1 ? 0 : end - count;
   const totalCount = data.length;
@@ -135,9 +136,13 @@ function getDiscountList() {
 
 function getGoodsList(params = {}) {
   const goods = JSON.parse(readFileSync(DB_GOODS) || "[]");
-  if (params === "all") {
+  
+  if (params === "all" || params.size === 'all') {
     return goods;
   }
+
+  
+  let size = params.size || 10;
   let page = 1;
   if (params.search) {
     const search = params.search.trim().toLowerCase();
@@ -147,14 +152,15 @@ function getGoodsList(params = {}) {
           str.toLowerCase().includes(search)
         )
       ),
-      page
+      page,
+      size,
     );
   }
 
   if (params.page) {
     page = parseInt(params.page);
   }
-  return pagination(goods, page);
+  return pagination(goods, page, size);
 }
 
 function getGoodsCategorytList(category) {
