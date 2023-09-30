@@ -159,7 +159,7 @@ GET /api/discount
 ### **Получение списка товаров по категории**
 
 - **Метод**: GET
-- **URL**: /api/category/{category}
+- **URL**: /api/{category}
 
 Пример запроса:
 
